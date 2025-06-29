@@ -6,6 +6,17 @@ _addon.commands = {'inven','iv'}
 require("logger")
 require('mylibs/utils')
 
+local use_queue = {}
+local use_timer = os.clock()
+
+windower.register_event('prerender', function(...)
+	if #use_queue > 0 and os.clock() - use_timer > 1 then
+		local item = table.remove(use_queue, 1)
+		windower.send_command(windower.to_shift_jis("input /item "..item.." <me>"))
+		use_timer = os.clock() + 5
+	end
+end)
+
 windower.register_event('addon command', function (...)
 	local args	= T{...}:map(string.lower)
 	if args[1] == nil or T{"help","h","show"}:contains(args[1]) then
@@ -21,6 +32,20 @@ windower.register_event('addon command', function (...)
 		end
 		file:close()
 		log('File exported!!')
+		
+	elseif T{"open","op","o"}:contains(args[1]) then
+		use_queue = {}
+		local inventory = windower.ffxi.get_items(0)
+		for i=1,inventory.max do
+			if inventory[i].id > 0 then
+				local item = res.items[inventory[i].id]
+				if item and item.category == 'Usable' then
+					for j=1,inventory[i].count do
+						table.insert(use_queue, 1, item.ja)
+					end
+				end
+			end
+		end
 	end
 end)
 
